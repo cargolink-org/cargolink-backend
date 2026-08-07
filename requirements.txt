@@ -1,0 +1,47 @@
+# --- Web framework / ASGI ---
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+gunicorn==23.0.0
+
+# --- Schemas / config ---
+pydantic==2.9.2
+pydantic-settings==2.5.2
+
+# --- Real-time (Socket.io) ---
+python-socketio==5.11.4
+
+# --- Database ---
+SQLAlchemy==2.0.35
+asyncpg==0.30.0
+alembic==1.13.3
+
+# --- Auth ---
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+
+# --- Outbound HTTP (OSRM, MSG91/Gupshup, SendGrid) ---
+httpx==0.27.2
+
+# --- Rate limiting ---
+slowapi==0.1.9
+
+# --- File storage ---
+boto3==1.35.36
+
+# --- Matching engine (Hungarian assignment, graph shortest-path, ML stretch) ---
+scipy==1.14.1
+scikit-learn==1.5.2
+networkx==3.3
+
+# --- Monitoring ---
+sentry-sdk[fastapi]==2.14.0
+
+# --- Uploads ---
+python-multipart==0.0.12
+
+# --- Testing ---
+pytest==8.3.3
+pytest-asyncio==0.24.0
+
+# --- Linting ---
+ruff==0.6.9
