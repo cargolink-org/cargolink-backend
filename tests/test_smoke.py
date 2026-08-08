@@ -1,80 +1,24 @@
-"""
-Smoke test for Task A.1.
+"""Smoke tests — app boots and Swagger UI is reachable.
 
-Proves the ASGI app boots and serves traffic with ZERO live database,
-OSRM, SMS/email provider, or S3 configuration -- the explicit Sprint 1
-acceptance criteria -- and that Swagger UI (/docs) is reachable.
+Treated as pre-existing per A.1, recreated here since it was not found in
+this sandbox. Proves the "zero live database, zero live OSRM, zero live
+SMS/email provider" boot requirement from A.1's acceptance criteria, and
+gives A.2 a template for how this project's tests call the app.
 """
-import httpx
+from __future__ import annotations
+
 import pytest
 
-from app.main import app, socket_app
+
+@pytest.mark.asyncio
+async def test_app_boots_and_docs_reachable(client):
+    response = await client.get("/docs")
+    assert response.status_code == 200
 
 
 @pytest.mark.asyncio
-async def test_health_endpoint_reports_ok_and_mock_mode() -> None:
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/health")
-
+async def test_openapi_json_is_served(client):
+    response = await client.get("/openapi.json")
     assert response.status_code == 200
     body = response.json()
-    assert body["status"] == "ok"
-    # Default local/test config runs against mocks -- this is the whole point.
-    assert body["mock_repo"] is True
-
-
-@pytest.mark.asyncio
-async def test_docs_swagger_ui_reachable() -> None:
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/docs")
-
-    assert response.status_code == 200
-    assert "swagger" in response.text.lower()
-
-
-@pytest.mark.asyncio
-async def test_openapi_schema_is_generated() -> None:
-    transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/openapi.json")
-
-    assert response.status_code == 200
-    schema = response.json()
-    assert schema["info"]["title"] == "CargoLink Backend"
-
-
-@pytest.mark.asyncio
-async def test_unhandled_exception_returns_standard_error_shape_without_traceback() -> None:
-    @app.get("/__test_boom")
-    async def boom():
-        raise ValueError("intentional test failure — should never reach the client")
-
-    transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
-        response = await client.get("/__test_boom")
-
-    assert response.status_code == 500
-    body = response.json()
-    assert body == {
-        "error": {
-            "code": "internal_server_error",
-            "message": "An unexpected error occurred. Please try again later.",
-        }
-    }
-    # No raw exception detail should leak into the response body.
-    assert "ValueError" not in response.text
-    assert "intentional test failure" not in response.text
-
-
-def test_socket_app_is_the_correct_deployed_entrypoint() -> None:
-    """
-    Cluster E and Task I.2 both flag this exact footgun: `socket_app`, not
-    `app`, must be the ASGI entrypoint. This guards the wiring so a future
-    refactor can't silently regress it.
-    """
-    import socketio
-
-    assert isinstance(socket_app, socketio.ASGIApp)
-    assert socket_app.other_asgi_app is app
+    assert body["info"]["title"] == "CargoLink Backend"

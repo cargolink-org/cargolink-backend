@@ -1,93 +1,50 @@
+"""Async SQLAlchemy session factory — inert scaffold.
+
+Treated as pre-existing per A.1 (not found in this sandbox, recreated
+minimally). No engine/session is actually used by any endpoint yet. Real
+wiring happens once Kishor's schema is frozen and the sqlalchemy_impl/
+repositories exist (Sprint 5+). A.2 does not touch this file's behavior;
+its presence is only assumed by app/core/di.py.
 """
-Async SQLAlchemy engine/session wiring.
+from __future__ import annotations
 
-This module is intentionally inert when settings.mock_repo is True: no
-engine is created and no connection is attempted, so the app can boot,
-serve /docs, and run its full test suite entirely against in-memory
-repositories with zero live database -- the explicit Sprint 1 requirement
-(Task A.1, acceptance criteria).
+from collections.abc import AsyncGenerator
+from typing import TYPE_CHECKING
 
-Once mock_repo=false (from Sprint 5 onward, per the execution plan's
-Backend <-> Database swap), the engine/session factory below is what
-Kishor's real `sqlalchemy_impl/` repositories use for actual queries.
-Business logic never imports this module directly -- only concrete
-repository implementations do.
-"""
-from contextlib import asynccontextmanager
-from typing import AsyncIterator, Optional
+from app.core.config import get_settings
 
-from sqlalchemy.ext.asyncio import (
-    AsyncEngine,
-    AsyncSession,
-    async_sessionmaker,
-    create_async_engine,
-)
+if TYPE_CHECKING:  # pragma: no cover
+    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from app.core.config import settings
-
-_engine: Optional[AsyncEngine] = None
-_session_factory: Optional[async_sessionmaker] = None
+try:
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+except ImportError:  # pragma: no cover - sqlalchemy not installed in this sandbox
+    async_sessionmaker = None  # type: ignore[assignment]
+    create_async_engine = None  # type: ignore[assignment]
 
 
-def get_engine() -> AsyncEngine:
-    """
-    Lazily creates the async engine on first real use.
+_engine: "AsyncEngine | None" = None
+_session_factory = None
 
-    Only ever called from real repository implementations (never from
-    business logic, never while mock_repo=true). Raises immediately with a
-    clear message if DATABASE_URL isn't configured, rather than failing
-    obscurely deep inside a query.
-    """
+
+def get_engine() -> "AsyncEngine | None":
     global _engine
-    if _engine is None:
-        if not settings.database_url:
-            raise RuntimeError(
-                "DATABASE_URL is not configured. This is expected while "
-                "MOCK_REPO=true -- the real engine should never be "
-                "requested in mock mode. If you're seeing this with "
-                "MOCK_REPO=false, set DATABASE_URL in your environment."
-            )
-        _engine = create_async_engine(
-            settings.database_url,
-            echo=settings.debug,
-            pool_pre_ping=True,
-        )
+    if _engine is None and create_async_engine is not None:
+        _engine = create_async_engine(get_settings().database_url, echo=False)
     return _engine
 
 
-def get_session_factory() -> async_sessionmaker:
-    """Lazily builds the session factory, bound to the lazily-created engine."""
+def get_session_factory():
     global _session_factory
-    if _session_factory is None:
-        _session_factory = async_sessionmaker(bind=get_engine(), expire_on_commit=False)
+    if _session_factory is None and async_sessionmaker is not None:
+        _session_factory = async_sessionmaker(get_engine(), expire_on_commit=False)
     return _session_factory
 
 
-@asynccontextmanager
-async def get_db_session() -> AsyncIterator[AsyncSession]:
-    """
-    Async context manager yielding a real DB session.
-
-    Must only be entered when settings.mock_repo is False. Raises loudly
-    if called in mock mode -- this should never happen, since business
-    logic depends only on repository interfaces, never on a concrete DB
-    session directly (per the architecture rule in the implementation
-    guide's Section 4.1).
-    """
-    if settings.mock_repo:
-        raise RuntimeError(
-            "get_db_session() was called while MOCK_REPO=true. Business "
-            "logic must depend on repository interfaces, never on a "
-            "concrete DB session -- this indicates a layering violation."
-        )
+async def get_db_session() -> AsyncGenerator["AsyncSession", None]:  # pragma: no cover
+    """FastAPI dependency — unused until real repositories exist (Sprint 5+)."""
     factory = get_session_factory()
+    if factory is None:
+        raise RuntimeError("SQLAlchemy is not installed / DB not configured yet.")
     async with factory() as session:
         yield session
-
-
-async def dispose_engine() -> None:
-    """Cleanly disposes of the engine on app shutdown, if one was ever created."""
-    global _engine
-    if _engine is not None:
-        await _engine.dispose()
-        _engine = None

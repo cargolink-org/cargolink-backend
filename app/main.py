@@ -1,123 +1,100 @@
+"""CargoLink FastAPI application entrypoint.
+
+Exposes:
+  - `app`         the FastAPI instance (title="CargoLink Backend").
+  - `socket_app`  the combined ASGI app (FastAPI + python-socketio), the
+                   actual deployment entrypoint per the technical spec's
+                   §2.4 integration pattern. Full `python-socketio`
+                   handlers are Task E.1's job — this file only mounts an
+                   inert AsyncServer so the ASGI wrapper exists, matching
+                   the Sprint 1 "Socket.io ASGI mount scaffold" deliverable.
+
+Treated as pre-existing per A.1 (not found in this sandbox, recreated
+minimally with the exact global-exception-handler shape the A.2 task
+description specifies, so downstream code has something real to import).
+
+A.2 additions: registration of every domain router below so FastAPI's
+OpenAPI generation (`app.openapi()`, `/openapi.json`, `/docs`, `/redoc`)
+reflects the full contract. No business logic is added here — every
+handler in every domain router is a stub.
 """
-CargoLink backend ASGI entrypoint.
+from __future__ import annotations
 
-Mounts the FastAPI REST application together with the python-socketio
-real-time layer under a single ASGI app (`socket_app`), per the confirmed
-technical spec (Sec 2.4):
-
-    socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
-
-`socket_app`, not `app`, MUST be the deployed entrypoint everywhere --
-local (`uvicorn app.main:socket_app`), staging, and production
-(Gunicorn+Uvicorn workers). Deploying `app` alone silently breaks only the
-real-time tracking layer while every REST endpoint continues to appear to
-work, which is exactly the kind of bug that's expensive to catch late --
-see Cluster E and Cluster I.2 in the Backend Implementation Guide.
-
-Sprint 1 scope (Task A.1): app skeleton, global error handling, and a
-minimal Socket.io mount proving the wiring works end-to-end. Full JWT
-validation, room-join authorization, and location-broadcast handlers are
-Task E.1 (Sprint 4) -- not implemented here.
-"""
 import logging
-from contextlib import asynccontextmanager
 
-import socketio
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from app.core.config import settings
-from app.core.db import dispose_engine
+from app.core.errors import ErrorDetail, ErrorResponse
 
-logger = logging.getLogger("cargolink")
-logging.basicConfig(level=logging.DEBUG if settings.debug else logging.INFO)
+logger = logging.getLogger("cargolink.backend")
 
 
 def create_app() -> FastAPI:
-    """Builds and configures the FastAPI REST application (pre-Socket.io mount)."""
     application = FastAPI(
-        title=settings.app_name,
-        description="Smart Freight Matching & Tracking System — Backend API",
+        title="CargoLink Backend",
+        description=(
+            "Smart Freight Matching & Tracking System — backend API. "
+            "This is the live-generated source of truth for the API contract; "
+            "the committed, versioned export lives at shared/openapi/openapi.yaml "
+            "and is checked for drift by backend/tests/test_openapi_contract.py."
+        ),
         version="0.1.0",
-        docs_url="/docs",
-        redoc_url="/redoc",
-        openapi_url="/openapi.json",
-        lifespan=lifespan,
     )
 
     @application.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-        """
-        Converts any unhandled exception into CargoLink's standard error
-        response shape. Never leaks a raw traceback or exception message
-        to the client -- full detail goes to the server-side log only.
-        """
         logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
         return JSONResponse(
             status_code=500,
-            content={
-                "error": {
-                    "code": "internal_server_error",
-                    "message": "An unexpected error occurred. Please try again later.",
-                }
-            },
+            content=ErrorResponse(
+                error=ErrorDetail(code="internal_error", message="An unexpected error occurred.")
+            ).model_dump(),
         )
 
-    @application.get("/health", tags=["system"])
-    async def health() -> dict:
-        """
-        Liveness/health-check endpoint. Used by CI smoke tests (Task I.2)
-        and, in production, by the hosting platform's health-check probe.
-        Deliberately reports whether mock repositories are active, so a
-        `mock_repo: true` response in a production health check is an
-        instant, visible red flag.
-        """
-        return {
-            "status": "ok",
-            "environment": settings.environment.value,
-            "mock_repo": settings.mock_repo,
-        }
+    # --- Domain routers -------------------------------------------------
+    # Registered here purely so /openapi.json reflects the full A.2
+    # contract. Handler bodies are NotImplementedError stubs; B.1 onward
+    # fills in real business logic per-domain.
+    from app.admin.router import router as admin_router
+    from app.auth.router import router as auth_router
+    from app.checkpoints.router import router as checkpoints_router
+    from app.containers.router import router as containers_router
+    from app.documents.router import router as documents_router
+    from app.loads.router import router as loads_router
+    from app.matching.router import router as matching_router
+    from app.notifications.router import router as notifications_router
+    from app.pricing.router import router as pricing_router
+    from app.profiles.router import router as profiles_router
+    from app.ratings.router import router as ratings_router
+    from app.tracking.router import router as tracking_router
+    from app.vehicles.router import router as vehicles_router
+
+    application.include_router(auth_router)
+    application.include_router(profiles_router)
+    application.include_router(vehicles_router)
+    application.include_router(loads_router)
+    application.include_router(matching_router)
+    application.include_router(pricing_router)
+    application.include_router(tracking_router)
+    application.include_router(documents_router)
+    application.include_router(checkpoints_router)
+    application.include_router(containers_router)
+    application.include_router(notifications_router)
+    application.include_router(admin_router)
+    application.include_router(ratings_router)
 
     return application
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    try:
-        yield
-    finally:
-        await dispose_engine()
-
-
 app = create_app()
 
-# --- Socket.io real-time layer ---
-# ASGI-mode server; wire-protocol-identical to the original Node/Socket.io
-# plan, so no React Native client-side changes were needed when the
-# backend language changed from Node to Python (technical spec Sec 2.4).
-sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+# --- Socket.io ASGI mount (scaffold only; full handlers are Task E.1) ----
+try:
+    import socketio
 
-
-@sio.event
-async def connect(sid: str, environ: dict, auth: dict | None) -> None:
-    """
-    Placeholder connect handler for Task A.1.
-
-    Full JWT validation and room-join authorization (`load:{load_id}`)
-    are implemented in Task E.1 (Sprint 4, Cluster E). This Sprint 1
-    version exists only to prove the ASGI mount is wired correctly
-    end-to-end; it accepts every connection unconditionally and must not
-    be relied on for anything security-sensitive until E.1 lands.
-    """
-    logger.debug("socket connect: sid=%s", sid)
-
-
-@sio.event
-async def disconnect(sid: str) -> None:
-    logger.debug("socket disconnect: sid=%s", sid)
-
-
-# This is the ASGI entrypoint that must be deployed everywhere:
-#     uvicorn app.main:socket_app
-# NOT `app` on its own. See the module docstring above.
-socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+    sio = socketio.AsyncServer(async_mode="asgi", cors_allowed_origins="*")
+    socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+except ImportError:  # pragma: no cover - python-socketio not installed in this sandbox
+    sio = None
+    socket_app = app

@@ -1,11 +1,17 @@
+[project]
+name = "cargolink-backend"
+version = "0.1.0"
+description = "CargoLink — Smart Freight Matching & Tracking System backend (FastAPI)"
+requires-python = ">=3.11"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.ruff]
-line-length = 110
+line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "F", "I", "UP", "B"]
+select = ["E", "F", "I", "W"]
