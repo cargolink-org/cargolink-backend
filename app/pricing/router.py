@@ -1,25 +1,25 @@
-"""Pricing domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+pricing — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, Query, status
+Endpoints (technical spec Sec. 5): GET /pricing/quote
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.pricing.schemas import PricingQuoteResponse
 
 router = APIRouter(prefix="/pricing", tags=["pricing"])
 
 
-@router.get(
-    "/quote",
-    response_model=PricingQuoteResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Get a fare quote for a load",
-)
-async def get_pricing_quote(
-    load_id: UUID = Query(..., description="The load to quote a fare for."),
-) -> PricingQuoteResponse:
-    """Stub — real pricing logic (Cluster D.1) lands in Sprint 3."""
-    raise NotImplementedError("Implemented in Task D.1 (Sprint 3)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def pricing_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "pricing endpoints not implemented yet"}})

@@ -1,57 +1,25 @@
-"""Auth domain router — route registration only, per A.2 scope.
-
-Handler bodies are stubs; real OTP/JWT logic is Task B.1. This module's
-only job right now is to make sure FastAPI's OpenAPI generation reflects
-these three endpoints with their exact request/response schemas.
 """
-from __future__ import annotations
+auth — FastAPI router stub (Task A.2).
 
-from fastapi import APIRouter, status
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from app.auth.schemas import (
-    OtpRequestRequest,
-    OtpRequestResponse,
-    OtpVerifyRequest,
-    OtpVerifyResponse,
-    TokenRefreshRequest,
-    TokenRefreshResponse,
-)
+Endpoints (technical spec Sec. 5): POST /auth/otp/request, POST /auth/otp/verify, POST /auth/refresh
+"""
+
+from fastapi import APIRouter, HTTPException
+
 from app.core.errors import ERROR_RESPONSES
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.post(
-    "/otp/request",
-    response_model=OtpRequestResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Request an OTP for a phone number",
-)
-async def request_otp(payload: OtpRequestRequest) -> OtpRequestResponse:
-    """Stub — real logic (rate limiting, SMS dispatch) lands in Task B.1."""
-    raise NotImplementedError("Implemented in Task B.1")
-
-
-@router.post(
-    "/otp/verify",
-    response_model=OtpVerifyResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Verify an OTP and receive a token pair",
-)
-async def verify_otp(payload: OtpVerifyRequest) -> OtpVerifyResponse:
-    """Stub — real logic lands in Task B.1."""
-    raise NotImplementedError("Implemented in Task B.1")
-
-
-@router.post(
-    "/refresh",
-    response_model=TokenRefreshResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Exchange a refresh token for a new access token",
-)
-async def refresh_token(payload: TokenRefreshRequest) -> TokenRefreshResponse:
-    """Stub — real logic lands in Task B.1."""
-    raise NotImplementedError("Implemented in Task B.1")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def auth_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "auth endpoints not implemented yet"}})

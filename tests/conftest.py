@@ -1,27 +1,31 @@
-"""Shared pytest fixtures.
-
-Treated as pre-existing per A.1 ("tests/test_smoke.py for the pattern"),
-recreated here since it was not found in this sandbox. Provides an `app`
-fixture (fresh FastAPI instance per test, built via create_app()) and a
-`client` fixture (httpx.AsyncClient over ASGITransport, no real network/
-server process needed).
 """
+Shared pytest fixtures (Task A.1 pattern, reconstructed as a prerequisite
+for A.3 — see note in app/core/enums.py).
+"""
+
 from __future__ import annotations
 
 import pytest
-import pytest_asyncio
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 
-from app.main import create_app
+from app.core import di
+from app.main import app
 
 
 @pytest.fixture
-def app():
-    return create_app()
+async def client() -> AsyncClient:
+    async with AsyncClient(app=app, base_url="http://testserver") as client:
+        yield client
 
 
-@pytest_asyncio.fixture
-async def client(app):
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
-        yield ac
+@pytest.fixture(autouse=True)
+def _reset_di_registry():
+    """
+    Ensure every test starts with an empty DI registry, so tests that
+    register repositories don't leak state into unrelated tests and tests
+    that expect RepositoryNotRegisteredError don't accidentally see a
+    previous test's registrations.
+    """
+    di.reset_registry()
+    yield
+    di.reset_registry()

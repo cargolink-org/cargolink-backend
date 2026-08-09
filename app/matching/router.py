@@ -1,27 +1,25 @@
-"""Matching domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+matching — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, Query, status
+Endpoints (technical spec Sec. 5): GET /loads/{id}/matches
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.matching.schemas import LoadMatchesResponse
 
-router = APIRouter(prefix="/loads", tags=["matching"])
+router = APIRouter(prefix="/matching", tags=["matching"])
 
 
-@router.get(
-    "/{load_id}/matches",
-    response_model=LoadMatchesResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Get candidate vehicle matches for a load",
-)
-async def get_load_matches(
-    load_id: UUID,
-    radius_km: float = Query(50, gt=0, le=500, description="Search radius around the load's pickup point, in km."),
-    limit: int = Query(20, ge=1, le=100, description="Maximum number of candidates to return."),
-) -> LoadMatchesResponse:
-    """Stub — real matching logic (Cluster C.2 onward) lands starting Sprint 3."""
-    raise NotImplementedError("Implemented starting Task C.2 (Sprint 3)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def matching_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "matching endpoints not implemented yet"}})

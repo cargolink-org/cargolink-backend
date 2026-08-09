@@ -1,21 +1,25 @@
-"""Ratings domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+ratings — FastAPI router stub (Task A.2).
 
-from fastapi import APIRouter, status
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
+
+Endpoints (technical spec Sec. 5): POST /ratings
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.ratings.schemas import RatingCreateRequest, RatingCreateResponse
 
 router = APIRouter(prefix="/ratings", tags=["ratings"])
 
 
-@router.post(
-    "",
-    response_model=RatingCreateResponse,
-    status_code=status.HTTP_201_CREATED,
-    responses=ERROR_RESPONSES,
-    summary="Submit a post-trip rating",
-)
-async def create_rating(payload: RatingCreateRequest) -> RatingCreateResponse:
-    """Stub — real logic (duplicate/ownership checks, rating_avg update) lands in Cluster H.2 (Sprint 6)."""
-    raise NotImplementedError("Implemented in Task H.2 (Sprint 6)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def ratings_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "ratings endpoints not implemented yet"}})

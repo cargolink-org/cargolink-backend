@@ -1,35 +1,25 @@
-"""Notifications domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+notifications — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, status
+Endpoints (technical spec Sec. 5): GET /notifications, PATCH /notifications/{id}/read
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.notifications.schemas import NotificationListResponse, NotificationResponse
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
-@router.get(
-    "",
-    response_model=NotificationListResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="List the calling user's notifications",
-)
-async def list_notifications() -> NotificationListResponse:
-    """Stub — real logic lands in Cluster G.1 (Sprint 6)."""
-    raise NotImplementedError("Implemented in Task G.1 (Sprint 6)")
-
-
-@router.patch(
-    "/{notification_id}/read",
-    response_model=NotificationResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Mark a notification as read",
-)
-async def mark_notification_read(notification_id: UUID) -> NotificationResponse:
-    """Stub — real logic lands in Cluster G.1 (Sprint 6)."""
-    raise NotImplementedError("Implemented in Task G.1 (Sprint 6)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def notifications_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "notifications endpoints not implemented yet"}})

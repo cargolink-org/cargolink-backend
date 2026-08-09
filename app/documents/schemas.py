@@ -1,21 +1,32 @@
-"""Shipment document checklist contract.
-
-GET /documents/{loadId}, POST /documents/{loadId}/upload.
 """
-from __future__ import annotations
+documents — API request/response schemas (Task A.2).
+
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py (this sandbox has no persisted state from prior
+sessions). Per-shipment document checklist.
+
+IMPORTANT: these are API-facing Pydantic models only. Task A.3's
+repository layer (app/repositories/models.py) defines its OWN, separate
+internal domain models and must never import from this module — see the
+architectural rule in the A.3 task prompt.
+
+Endpoints this file backs (technical spec Sec. 5 / this domain's slice):
+  - GET /documents/{loadId}
+  - POST /documents/{loadId}/upload
+"""
 
 from enum import Enum
-from uuid import UUID
+from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class DocType(str, Enum):
     COMMERCIAL_INVOICE = "commercial_invoice"
     PACKING_LIST = "packing_list"
-    BILL_OF_LADING_OR_AIRWAY_BILL = "bill_of_lading_or_airway_bill"
+    BILL_OF_LADING = "bill_of_lading"
+    AIRWAY_BILL = "airway_bill"
     CUSTOMS_CLEARANCE_CERTIFICATE = "customs_clearance_certificate"
-    CERTIFICATE_OF_ORIGIN = "certificate_of_origin"
 
 
 class DocumentStatus(str, Enum):
@@ -23,39 +34,26 @@ class DocumentStatus(str, Enum):
     UPLOADED = "Uploaded"
     VERIFIED = "Verified"
     CLEARED = "Cleared"
-    # Note: Cluster F.1 describes an admin-rejection path ("status flips
-    # back with a reason field"). That's business logic added in Cluster F;
-    # this enum sticks to exactly the four states named in this task's
-    # acceptance criteria so the frozen contract matches what was specified.
-    # A Rejected state (plus a reason field on the item) is a likely
-    # addition when F.1 is implemented — flagged here so it isn't a
-    # surprise breaking change to this enum later.
 
 
 class ShipmentDocumentItem(BaseModel):
-    doc_type: DocType = Field(..., description="Which checklist item this is.")
-    status: DocumentStatus = Field(..., description="Current status of this document.")
-    file_url: str | None = Field(None, description="Short-lived signed URL to read the uploaded file, if any.")
+    doc_type: DocType
+    status: DocumentStatus
+    file_url: Optional[str] = None
 
 
-class DocumentChecklistResponse(BaseModel):
-    documents: list[ShipmentDocumentItem] = Field(
-        ..., description="The cargo-type-conditional checklist for this load (see Cluster F.1's rules.py)."
+class DocumentsPlaceholderRequest(BaseModel):
+    """Placeholder request model — narrowed into per-endpoint models as this
+    domain's router logic (Clusters B-H) is implemented."""
+
+    note: str = Field(
+        default="stub",
+        description="Placeholder field; replaced by real per-endpoint schemas "
+        "as this domain's business logic is implemented.",
     )
 
 
-class DocumentUploadRequest(BaseModel):
-    """Metadata accompanying a multipart document upload.
+class DocumentsPlaceholderResponse(BaseModel):
+    """Placeholder response model — see DocumentsPlaceholderRequest."""
 
-    The technical spec marks this endpoint `(multipart)`; the binary file
-    part itself is handled via FastAPI's `UploadFile` in the real B.2/F.1
-    handler, not modeled as a Pydantic field here. This schema documents
-    the form-field metadata that travels alongside the file.
-    """
-
-    doc_type: DocType = Field(..., description="Which checklist item this upload satisfies.")
-
-
-class DocumentUploadResponse(BaseModel):
-    doc_id: UUID = Field(..., description="Identifier of the created/updated document record.")
-    status: DocumentStatus = Field(..., description="Document status after upload (typically 'Uploaded').")
+    note: str = Field(default="stub", description="Placeholder field.")

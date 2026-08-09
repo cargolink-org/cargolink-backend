@@ -1,17 +1,44 @@
-"""Admin analytics contract — GET /admin/stats/overview."""
-from __future__ import annotations
+"""
+admin — API request/response schemas (Task A.2).
 
-from pydantic import BaseModel, Field
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py (this sandbox has no persisted state from prior
+sessions). Admin stats aggregation.
+
+IMPORTANT: these are API-facing Pydantic models only. Task A.3's
+repository layer (app/repositories/models.py) defines its OWN, separate
+internal domain models and must never import from this module — see the
+architectural rule in the A.3 task prompt.
+
+Endpoints this file backs (technical spec Sec. 5 / this domain's slice):
+  - GET /admin/stats/overview
+"""
+
+from typing import List
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class RouteStat(BaseModel):
-    route: str = Field(..., description="Corridor label, e.g. 'Mumbai -> Delhi'.")
-    shipment_count: int = Field(..., ge=0, description="Number of shipments on this route in the reporting window.")
+    route: str
+    shipment_count: int
+
+    @field_validator("shipment_count")
+    def shipment_count_must_be_non_negative(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("shipment_count must be non-negative")
+        return value
 
 
 class AdminStatsOverviewResponse(BaseModel):
-    active: int = Field(..., ge=0, description="Count of currently active (in-progress) shipments.")
-    completed: int = Field(..., ge=0, description="Count of completed shipments.")
-    delayed: int = Field(..., ge=0, description="Count of shipments currently flagged delayed.")
-    revenue: float = Field(..., ge=0, description="Gross revenue for the reporting window.")
-    top_routes: list[RouteStat] = Field(..., description="Most popular corridors, ranked by shipment count.")
+    active: int
+    completed: int
+    delayed: int
+    revenue: int
+    top_routes: List[RouteStat] = Field(default_factory=list)
+
+    @field_validator("active", "completed", "delayed", "revenue")
+    def non_negative_counts(cls, value: int) -> int:
+        if value < 0:
+            raise ValueError("counts must be non-negative")
+        return value

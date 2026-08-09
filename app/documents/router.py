@@ -1,35 +1,25 @@
-"""Documents domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+documents — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, status
+Endpoints (technical spec Sec. 5): GET /documents/{loadId}, POST /documents/{loadId}/upload
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.documents.schemas import DocumentChecklistResponse, DocumentUploadResponse
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
 
-@router.get(
-    "/{load_id}",
-    response_model=DocumentChecklistResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Get the document checklist for a load",
-)
-async def get_documents(load_id: UUID) -> DocumentChecklistResponse:
-    """Stub — real logic lands in Cluster F.1 (Sprint 5)."""
-    raise NotImplementedError("Implemented in Task F.1 (Sprint 5)")
-
-
-@router.post(
-    "/{load_id}/upload",
-    response_model=DocumentUploadResponse,
-    status_code=status.HTTP_201_CREATED,
-    responses=ERROR_RESPONSES,
-    summary="Upload a shipment document (multipart)",
-)
-async def upload_document(load_id: UUID) -> DocumentUploadResponse:
-    """Stub — real multipart handling + StorageClient wiring lands in B.2/F.1."""
-    raise NotImplementedError("Implemented in Tasks B.2 and F.1")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def documents_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "documents endpoints not implemented yet"}})

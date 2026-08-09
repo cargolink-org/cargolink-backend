@@ -1,50 +1,54 @@
-"""Async SQLAlchemy session factory — inert scaffold.
-
-Treated as pre-existing per A.1 (not found in this sandbox, recreated
-minimally). No engine/session is actually used by any endpoint yet. Real
-wiring happens once Kishor's schema is frozen and the sqlalchemy_impl/
-repositories exist (Sprint 5+). A.2 does not touch this file's behavior;
-its presence is only assumed by app/core/di.py.
 """
+Future home of the real async SQLAlchemy engine + session factory.
+
+Task A.3 explicitly must not import this module and must not touch it —
+persistence for every entity in this task is provided exclusively by
+app/repositories/mock_impl/. This file stays inert until Kishor's
+sqlalchemy_impl/ classes are wired in from Sprint 5 onward (Data/Schema
+Contract freeze at Week 4, real DB available Week 8, swap begins Week 10).
+"""
+
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
-from typing import TYPE_CHECKING
+from contextlib import asynccontextmanager
+from typing import Optional
 
-from app.core.config import get_settings
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
+from sqlalchemy.orm import sessionmaker
 
-if TYPE_CHECKING:  # pragma: no cover
-    from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
-
-try:
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-except ImportError:  # pragma: no cover - sqlalchemy not installed in this sandbox
-    async_sessionmaker = None  # type: ignore[assignment]
-    create_async_engine = None  # type: ignore[assignment]
+from app.core.config import settings
 
 
-_engine: "AsyncEngine | None" = None
-_session_factory = None
+_engine: Optional[AsyncEngine] = None
+_session_factory: Optional[sessionmaker[AsyncSession]] = None
 
 
-def get_engine() -> "AsyncEngine | None":
-    global _engine
-    if _engine is None and create_async_engine is not None:
-        _engine = create_async_engine(get_settings().database_url, echo=False)
+def get_engine() -> AsyncEngine:
+    global _engine, _session_factory
+
+    if _engine is not None:
+        return _engine
+
+    if not settings.database_url:
+        raise RuntimeError("DATABASE_URL is not configured")
+
+    _engine = create_async_engine(settings.database_url, future=True)
+    _session_factory = sessionmaker(_engine, expire_on_commit=False, class_=AsyncSession)
     return _engine
 
 
-def get_session_factory():
-    global _session_factory
-    if _session_factory is None and async_sessionmaker is not None:
-        _session_factory = async_sessionmaker(get_engine(), expire_on_commit=False)
-    return _session_factory
+@asynccontextmanager
+async def get_db_session():
+    if settings.MOCK_REPO:
+        raise RuntimeError(
+            "get_db_session() should never be called while MOCK_REPO=true; "
+            "business logic must depend on repository interfaces, not this "
+            "module, until the Week 10 swap."
+        )
 
+    if _session_factory is None:
+        get_engine()
 
-async def get_db_session() -> AsyncGenerator["AsyncSession", None]:  # pragma: no cover
-    """FastAPI dependency — unused until real repositories exist (Sprint 5+)."""
-    factory = get_session_factory()
-    if factory is None:
-        raise RuntimeError("SQLAlchemy is not installed / DB not configured yet.")
-    async with factory() as session:
+    assert _session_factory is not None
+    async with _session_factory() as session:
         yield session

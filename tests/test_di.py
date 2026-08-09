@@ -1,66 +1,74 @@
 """
-Tests for the DI container scaffolding introduced in Task A.1.
-
-Full repository registrations arrive in Task A.3 onward; this suite only
-proves the registry mechanism itself -- registration, resolution, and the
-mock<->real switch -- works correctly in isolation.
+Tests for app/core/di.py (Task A.1), reconstructed as a prerequisite for
+A.3 — see note in app/core/enums.py. A.3 does not modify di.py; these
+tests just establish the reset_registry() pattern that
+tests/repositories/conftest.py and tests/test_di_registrations.py build on.
 """
+
 import pytest
 
 from app.core import di
+from app.core.config import settings
 
 
-class _FakeRepo:
-    """Stand-in interface/implementation pair used only by these tests."""
-
-    def __init__(self, label: str) -> None:
-        self.label = label
+class _FakeInterface:
+    pass
 
 
-@pytest.fixture(autouse=True)
-def _clean_registry():
-    di.reset_registry()
-    yield
-    di.reset_registry()
+def test_register_and_get_returns_mock_instance():
+    sentinel = object()
+    di.register_repository(_FakeInterface, mock_factory=lambda: sentinel)
+
+    assert di.get_repository(_FakeInterface) is sentinel
 
 
-def test_register_and_resolve_mock_repository(monkeypatch) -> None:
-    monkeypatch.setattr(di.settings, "mock_repo", True)
-    di.register_repository(_FakeRepo, mock_factory=lambda: _FakeRepo("mock"))
+def test_get_repository_caches_singleton_instance():
+    calls = {"count": 0}
 
-    provider = di.get_repository(_FakeRepo)
-    assert provider().label == "mock"
+    def factory():
+        calls["count"] += 1
+        return object()
+
+    di.register_repository(_FakeInterface, mock_factory=factory)
+
+    first = di.get_repository(_FakeInterface)
+    second = di.get_repository(_FakeInterface)
+
+    assert first is second
+    assert calls["count"] == 1
 
 
-def test_register_and_resolve_real_repository(monkeypatch) -> None:
-    monkeypatch.setattr(di.settings, "mock_repo", False)
+def test_get_repository_unregistered_raises():
+    with pytest.raises(di.RepositoryNotRegisteredError):
+        di.get_repository(_FakeInterface)
+
+
+def test_register_repository_refuses_mock_only_when_not_mock_repo(monkeypatch):
+    monkeypatch.setattr(settings, "MOCK_REPO", False)
+
+    with pytest.raises(RuntimeError):
+        di.register_repository(_FakeInterface, mock_factory=lambda: object())
+
+
+def test_register_repository_allows_mock_with_real_factory_when_not_mock_repo(monkeypatch):
+    monkeypatch.setattr(settings, "MOCK_REPO", False)
+
+    real_sentinel = object()
     di.register_repository(
-        _FakeRepo,
-        mock_factory=lambda: _FakeRepo("mock"),
-        real_factory=lambda: _FakeRepo("real"),
+        _FakeInterface,
+        mock_factory=lambda: object(),
+        real_factory=lambda: real_sentinel,
     )
 
-    provider = di.get_repository(_FakeRepo)
-    assert provider().label == "real"
+    assert di.get_repository(_FakeInterface) is real_sentinel
 
 
-def test_real_mode_without_real_factory_raises_clearly(monkeypatch) -> None:
-    monkeypatch.setattr(di.settings, "mock_repo", False)
-    with pytest.raises(RuntimeError, match="no real implementation is registered"):
-        di.register_repository(_FakeRepo, mock_factory=lambda: _FakeRepo("mock"))
+def test_reset_registry_clears_registrations_and_cache():
+    di.register_repository(_FakeInterface, mock_factory=lambda: object())
+    di.get_repository(_FakeInterface)  # populate the instance cache
 
+    di.reset_registry()
 
-def test_unregistered_interface_raises_clear_error() -> None:
-    provider = di.get_repository(_FakeRepo)
-    with pytest.raises(RuntimeError, match="No repository registered"):
-        provider()
-
-
-def test_each_call_produces_a_fresh_instance_from_the_factory(monkeypatch) -> None:
-    monkeypatch.setattr(di.settings, "mock_repo", True)
-    di.register_repository(_FakeRepo, mock_factory=lambda: _FakeRepo("mock"))
-
-    provider = di.get_repository(_FakeRepo)
-    first, second = provider(), provider()
-    assert first is not second
-    assert first.label == second.label == "mock"
+    assert not di.is_registered(_FakeInterface)
+    with pytest.raises(di.RepositoryNotRegisteredError):
+        di.get_repository(_FakeInterface)

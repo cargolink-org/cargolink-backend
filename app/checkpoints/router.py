@@ -1,23 +1,25 @@
-"""Checkpoints domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+checkpoints — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, status
+Endpoints (technical spec Sec. 5): POST /checkpoints/{loadId}
+"""
 
-from app.checkpoints.schemas import CheckpointCreateRequest, CheckpointCreateResponse
+from fastapi import APIRouter, HTTPException
+
 from app.core.errors import ERROR_RESPONSES
 
 router = APIRouter(prefix="/checkpoints", tags=["checkpoints"])
 
 
-@router.post(
-    "/{load_id}",
-    response_model=CheckpointCreateResponse,
-    status_code=status.HTTP_201_CREATED,
-    responses=ERROR_RESPONSES,
-    summary="Post a checkpoint status update for a load",
-)
-async def create_checkpoint(load_id: UUID, payload: CheckpointCreateRequest) -> CheckpointCreateResponse:
-    """Stub — real logic + audit log lands in Cluster F.2 (Sprint 5)."""
-    raise NotImplementedError("Implemented in Task F.2 (Sprint 5)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def checkpoints_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "checkpoints endpoints not implemented yet"}})

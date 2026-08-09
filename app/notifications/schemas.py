@@ -1,14 +1,23 @@
-"""In-app notification contract — GET /notifications, PATCH /notifications/{id}/read.
-
-Inference note: per Cluster G.1's own note ("a read-side API for
-Frontend's inbox ... inferred, finalize in the OpenAPI contract"), routes
-below are the smallest reasonable shape for a notification inbox scoped
-to the calling user (identity from the JWT, not a path parameter).
 """
-from __future__ import annotations
+notifications — API request/response schemas (Task A.2).
+
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py (this sandbox has no persisted state from prior
+sessions). In-app notification inbox.
+
+IMPORTANT: these are API-facing Pydantic models only. Task A.3's
+repository layer (app/repositories/models.py) defines its OWN, separate
+internal domain models and must never import from this module — see the
+architectural rule in the A.3 task prompt.
+
+Endpoints this file backs (technical spec Sec. 5 / this domain's slice):
+  - GET /notifications
+  - PATCH /notifications/{id}/read
+"""
+
+from enum import Enum
 
 from datetime import datetime
-from enum import Enum
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -22,14 +31,25 @@ class NotificationType(str, Enum):
 
 
 class NotificationResponse(BaseModel):
-    id: UUID = Field(..., description="Unique notification identifier.")
-    type: NotificationType = Field(..., description="Which lifecycle event triggered this notification.")
-    message: str = Field(..., description="Human-readable notification text.")
-    sent_at: datetime = Field(..., description="When this notification was created/sent.")
-    read: bool = Field(False, description="Whether the recipient has marked this notification read.")
+    id: UUID
+    type: NotificationType
+    message: str
+    read: bool = False
+    sent_at: datetime
 
 
-class NotificationListResponse(BaseModel):
-    notifications: list[NotificationResponse] = Field(
-        ..., description="The calling user's notifications, most recent first."
+class NotificationsPlaceholderRequest(BaseModel):
+    """Placeholder request model — narrowed into per-endpoint models as this
+    domain's router logic (Clusters B-H) is implemented."""
+
+    note: str = Field(
+        default="stub",
+        description="Placeholder field; replaced by real per-endpoint schemas "
+        "as this domain's business logic is implemented.",
     )
+
+
+class NotificationsPlaceholderResponse(BaseModel):
+    """Placeholder response model — see NotificationsPlaceholderRequest."""
+
+    note: str = Field(default="stub", description="Placeholder field.")

@@ -1,47 +1,25 @@
-"""Vehicles domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+vehicles — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, status
+Endpoints (technical spec Sec. 5): POST /vehicles, GET /vehicles/{id}, GET /vehicles
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.vehicles.schemas import VehicleCreateRequest, VehicleListResponse, VehicleResponse
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
 
-@router.post(
-    "",
-    response_model=VehicleResponse,
-    status_code=status.HTTP_201_CREATED,
-    responses=ERROR_RESPONSES,
-    summary="Register a vehicle owned by the calling transporter",
-)
-async def create_vehicle(payload: VehicleCreateRequest) -> VehicleResponse:
-    """Stub — real logic lands with the rest of Sprint 2's onboarding work."""
-    raise NotImplementedError("Implemented in Sprint 2")
-
-
-@router.get(
-    "/{vehicle_id}",
-    response_model=VehicleResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Read a single vehicle",
-)
-async def get_vehicle(vehicle_id: UUID) -> VehicleResponse:
-    """Stub — real logic lands with the rest of Sprint 2's onboarding work."""
-    raise NotImplementedError("Implemented in Sprint 2")
-
-
-@router.get(
-    "",
-    response_model=VehicleListResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="List the calling transporter's own vehicles",
-)
-async def list_vehicles() -> VehicleListResponse:
-    """Stub — real logic lands with the rest of Sprint 2's onboarding work."""
-    raise NotImplementedError("Implemented in Sprint 2")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def vehicles_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "vehicles endpoints not implemented yet"}})

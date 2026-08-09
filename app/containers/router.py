@@ -1,47 +1,25 @@
-"""Containers domain router — route registration only, per A.2 scope."""
-from __future__ import annotations
+"""
+containers — FastAPI router stub (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, status
+Endpoints (technical spec Sec. 5): GET /containers/{loadId}, PUT /containers/{loadId}
+"""
 
-from app.containers.schemas import ContainerCreateRequest, ContainerResponse, ContainerUpdateRequest
+from fastapi import APIRouter, HTTPException
+
 from app.core.errors import ERROR_RESPONSES
 
 router = APIRouter(prefix="/containers", tags=["containers"])
 
 
-@router.post(
-    "/{load_id}",
-    response_model=ContainerResponse,
-    status_code=status.HTTP_201_CREATED,
-    responses=ERROR_RESPONSES,
-    summary="Attach container tracking data to a load",
-)
-async def create_container(load_id: UUID, payload: ContainerCreateRequest) -> ContainerResponse:
-    """Stub — real logic lands in Cluster F.3 (Sprint 5)."""
-    raise NotImplementedError("Implemented in Task F.3 (Sprint 5)")
-
-
-@router.get(
-    "/{load_id}",
-    response_model=ContainerResponse | None,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Read a load's container data (null for road-only loads)",
-)
-async def get_container(load_id: UUID) -> ContainerResponse | None:
-    """Stub — real logic lands in Cluster F.3 (Sprint 5)."""
-    raise NotImplementedError("Implemented in Task F.3 (Sprint 5)")
-
-
-@router.patch(
-    "/{container_id}",
-    response_model=ContainerResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Update container tracking data",
-)
-async def update_container(container_id: UUID, payload: ContainerUpdateRequest) -> ContainerResponse:
-    """Stub — real logic lands in Cluster F.3 (Sprint 5)."""
-    raise NotImplementedError("Implemented in Task F.3 (Sprint 5)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def containers_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "containers endpoints not implemented yet"}})

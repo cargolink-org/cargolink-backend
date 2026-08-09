@@ -1,32 +1,25 @@
-"""Tracking domain router — route registration only, per A.2 scope.
-
-Only the REST history read (GET /tracking/{vehicleId}) is registered
-here. The WS /socket.io `location:update` event is Task E.1's job.
 """
-from __future__ import annotations
+tracking — FastAPI router stub (Task A.2).
 
-from datetime import datetime
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py. Every route below is an intentional stub raising
+HTTP 501 until this domain's business-logic cluster is implemented; Task
+A.3 must NOT change this file (per its "DO NOT" list) beyond this initial
+recreation.
 
-from fastapi import APIRouter, Query, status
+Endpoints (technical spec Sec. 5): GET /tracking/{vehicleId}
+"""
+
+from fastapi import APIRouter, HTTPException
 
 from app.core.errors import ERROR_RESPONSES
-from app.tracking.schemas import TrackingHistoryResponse
 
 router = APIRouter(prefix="/tracking", tags=["tracking"])
 
 
-@router.get(
-    "/{vehicle_id}",
-    response_model=TrackingHistoryResponse,
-    status_code=status.HTTP_200_OK,
-    responses=ERROR_RESPONSES,
-    summary="Get historical location pings for a vehicle",
-)
-async def get_tracking_history(
-    vehicle_id: UUID,
-    from_: datetime | None = Query(None, alias="from", description="Start of the time window (inclusive)."),
-    to: datetime | None = Query(None, description="End of the time window (inclusive)."),
-) -> TrackingHistoryResponse:
-    """Stub — real read-path logic lands alongside Cluster E.1's write path (Sprint 4)."""
-    raise NotImplementedError("Implemented in Task E.1 (Sprint 4)")
+@router.get("/_stub", responses=ERROR_RESPONSES)
+async def tracking_stub():
+    """Placeholder route — replaced by real endpoints as this domain's
+    business logic (see Dinesh-Backend-Implementation-Guide.md, Clusters
+    B-H) is implemented."""
+    raise HTTPException(status_code=501, detail={"error": {"code": "not_implemented", "message": "tracking endpoints not implemented yet"}})

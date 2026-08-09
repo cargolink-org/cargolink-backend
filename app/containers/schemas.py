@@ -1,54 +1,66 @@
-"""Container tracking contract.
-
-Inference note: not enumerated in the technical spec at all. Routes below
-are inferred as CRUD-style operations consistent with the `containers`
-table (technical spec §4: container_no, vessel_or_flight,
-port_of_loading, port_of_discharge), scoped to a load since containers
-are always load-scoped in the schema (`load_id UUID REFERENCES
-loads(id)`):
-
-    POST  /containers/{loadId}       attach container data to a load
-    GET   /containers/{loadId}       read a load's container data (null/empty if road-only, per Cluster F.3)
-    PATCH /containers/{containerId}  update container data
 """
-from __future__ import annotations
+containers — API request/response schemas (Task A.2).
 
-from uuid import UUID
+Reconstructed here as a prerequisite for Task A.3 — see the note at the
+top of app/core/enums.py (this sandbox has no persisted state from prior
+sessions). Sea/air container tracking.
 
-from pydantic import BaseModel, Field
+IMPORTANT: these are API-facing Pydantic models only. Task A.3's
+repository layer (app/repositories/models.py) defines its OWN, separate
+internal domain models and must never import from this module — see the
+architectural rule in the A.3 task prompt.
 
-# ISO 6346 container number: 4 letters (owner code + category id) + 7 digits.
-CONTAINER_NO_PATTERN = r"^[A-Z]{4}\d{7}$"
+Endpoints this file backs (technical spec Sec. 5 / this domain's slice):
+  - GET /containers/{loadId}
+  - PUT /containers/{loadId}
+"""
+
+from typing import Optional
+import re
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class ContainerCreateRequest(BaseModel):
-    container_no: str = Field(
-        ..., pattern=CONTAINER_NO_PATTERN, description="ISO 6346 container number, e.g. MSCU1234567."
-    )
-    vessel_or_flight: str = Field(
-        ..., min_length=1, max_length=100, description="Vessel name or flight number carrying this container."
-    )
-    port_of_loading: str = Field(
-        ..., min_length=1, max_length=100, description="Port/airport where the container was loaded."
-    )
-    port_of_discharge: str = Field(
-        ..., min_length=1, max_length=100, description="Port/airport where the container will be discharged."
-    )
+    container_no: str
+    vessel_or_flight: str
+    port_of_loading: str
+    port_of_discharge: str
+
+    @field_validator("container_no")
+    def validate_container_no(cls, value: str) -> str:
+        if not re.fullmatch(r"[A-Z]{4}\d{7}", value):
+            raise ValueError("container_no must be a valid ISO 6346 container number")
+        return value
 
 
 class ContainerUpdateRequest(BaseModel):
-    container_no: str | None = Field(None, pattern=CONTAINER_NO_PATTERN, description="ISO 6346 container number.")
-    vessel_or_flight: str | None = Field(None, max_length=100, description="Vessel name or flight number.")
-    port_of_loading: str | None = Field(None, max_length=100, description="Port/airport where the container was loaded.")
-    port_of_discharge: str | None = Field(
-        None, max_length=100, description="Port/airport where the container will be discharged."
+    container_no: Optional[str] = None
+    vessel_or_flight: Optional[str] = None
+    port_of_loading: Optional[str] = None
+    port_of_discharge: Optional[str] = None
+
+    @field_validator("container_no")
+    def validate_container_no(cls, value: Optional[str]) -> Optional[str]:
+        if value is None:
+            return value
+        if not re.fullmatch(r"[A-Z]{4}\d{7}", value):
+            raise ValueError("container_no must be a valid ISO 6346 container number")
+        return value
+
+
+class ContainersPlaceholderRequest(BaseModel):
+    """Placeholder request model — narrowed into per-endpoint models as this
+    domain's router logic (Clusters B-H) is implemented."""
+
+    note: str = Field(
+        default="stub",
+        description="Placeholder field; replaced by real per-endpoint schemas "
+        "as this domain's business logic is implemented.",
     )
 
 
-class ContainerResponse(BaseModel):
-    id: UUID = Field(..., description="Unique container record identifier.")
-    load_id: UUID = Field(..., description="The load this container data belongs to.")
-    container_no: str = Field(..., description="ISO 6346 container number.")
-    vessel_or_flight: str = Field(..., description="Vessel name or flight number.")
-    port_of_loading: str = Field(..., description="Port/airport where the container was loaded.")
-    port_of_discharge: str = Field(..., description="Port/airport where the container will be discharged.")
+class ContainersPlaceholderResponse(BaseModel):
+    """Placeholder response model — see ContainersPlaceholderRequest."""
+
+    note: str = Field(default="stub", description="Placeholder field.")
